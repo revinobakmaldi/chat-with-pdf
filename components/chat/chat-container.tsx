@@ -1,0 +1,131 @@
+"use client";
+
+import { useRef, useEffect, useCallback, useState } from "react";
+import { ChatMessage } from "./chat-message";
+import { ChatInput } from "./chat-input";
+import { DocumentSidebar } from "./document-sidebar";
+import { sendChatMessage } from "@/lib/api";
+import { buildDocumentContext, generateSuggestedQuestions } from "@/lib/prompt";
+import type {
+  DocumentInfo,
+  ChatMessage as ChatMessageType,
+  LLMResponse,
+} from "@/lib/types";
+
+interface ChatContainerProps {
+  document: DocumentInfo;
+}
+
+export function ChatContainer({ document }: ChatContainerProps) {
+  const [messages, setMessages] = useState<ChatMessageType[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const documentContext = buildDocumentContext(document);
+  const suggestedQuestions = messages.length === 0
+    ? generateSuggestedQuestions(document)
+    : undefined;
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  const handleSend = useCallback(
+    async (content: string) => {
+      if (isLoading) return;
+
+      const userMsg: ChatMessageType = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content,
+      };
+
+      const assistantMsg: ChatMessageType = {
+        id: crypto.randomUUID(),
+        role: "assistant",
+        content: "",
+        loading: true,
+      };
+
+      setMessages((prev) => [...prev, userMsg, assistantMsg]);
+      setIsLoading(true);
+
+      try {
+        const historyForApi = [...messages, userMsg].map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+
+        const llmResponse: LLMResponse = await sendChatMessage(
+          documentContext,
+          historyForApi
+        );
+
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsg.id
+              ? {
+                  ...m,
+                  content: llmResponse.answer,
+                  pages: llmResponse.pages,
+                  loading: false,
+                }
+              : m
+          )
+        );
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : "Something went wrong";
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantMsg.id
+              ? {
+                  ...m,
+                  content: errorMessage,
+                  loading: false,
+                }
+              : m
+          )
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [isLoading, messages, documentContext]
+  );
+
+  return (
+    <div className="flex h-[calc(100vh-57px)] overflow-hidden">
+      <DocumentSidebar document={document} />
+
+      <div className="flex flex-1 flex-col">
+        {/* Messages */}
+        <div ref={scrollRef} className="flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
+          {messages.length === 0 && (
+            <div className="flex h-full items-center justify-center">
+              <div className="text-center">
+                <p className="text-lg font-medium text-zinc-600 dark:text-zinc-400">
+                  Ask a question about your PDF
+                </p>
+                <p className="mt-1 text-sm text-zinc-500">
+                  I&apos;ll read the document and answer with page references
+                </p>
+              </div>
+            </div>
+          )}
+          {messages.map((msg) => (
+            <ChatMessage key={msg.id} message={msg} />
+          ))}
+        </div>
+
+        {/* Input */}
+        <ChatInput
+          onSend={handleSend}
+          disabled={isLoading}
+          suggestedQuestions={suggestedQuestions}
+        />
+      </div>
+    </div>
+  );
+}
