@@ -6,12 +6,12 @@ AI-powered PDF document Q&A tool. Upload a PDF, ask questions in plain English, 
 
 ```
 Browser (PDF.js)                   Vercel Serverless (Python)
-┌─────────────────────┐           ┌───────────────────────┐
-│ PDF → Text extract  │           │ /api/chat             │
-│ Page-by-page parse  │──────────>│ Build system prompt   │
-│ Display answers     │<──────────│ Call OpenRouter LLM   │
-│ Page references     │           │ Return answer + pages │
-└─────────────────────┘           └───────────────────────┘
+┌──────────────────────┐           ┌───────────────────────┐
+│ PDF → Text extract   │           │ /api/chat             │
+│ Page-by-page parse   │──────────>│ Build system prompt   │
+│ Display answers      │<──────────│ Call OpenRouter LLM   │
+│ Page references      │           │ Return answer + pages │
+└──────────────────────┘           └───────────────────────┘
 ```
 
 - **PDF parsing & text extraction** happen client-side via PDF.js — no files leave the browser
