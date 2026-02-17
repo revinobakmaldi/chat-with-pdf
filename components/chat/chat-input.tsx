@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { Send } from "lucide-react";
+import { Send, Lightbulb } from "lucide-react";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
+  onInsight: (topic?: string) => void;
   disabled?: boolean;
   suggestedQuestions?: string[];
 }
 
-export function ChatInput({ onSend, disabled, suggestedQuestions }: ChatInputProps) {
+export function ChatInput({ onSend, onInsight, disabled, suggestedQuestions }: ChatInputProps) {
   const [value, setValue] = useState("");
 
   const handleSubmit = useCallback(
@@ -62,6 +63,23 @@ export function ChatInput({ onSend, disabled, suggestedQuestions }: ChatInputPro
           className="rounded-xl bg-primary p-3 text-white transition-all hover:bg-primary-dark disabled:opacity-50 disabled:hover:bg-primary"
         >
           <Send className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => {
+            const trimmed = value.trim();
+            if (trimmed) {
+              onInsight(trimmed);
+              setValue("");
+            } else {
+              onInsight();
+            }
+          }}
+          title="Get Insights"
+          className="rounded-xl bg-amber-500 p-3 text-white transition-all hover:bg-amber-600 disabled:opacity-50 disabled:hover:bg-amber-500"
+        >
+          <Lightbulb className="h-4 w-4" />
         </button>
       </form>
     </div>
